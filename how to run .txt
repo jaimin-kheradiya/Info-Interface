@@ -1,0 +1,128 @@
+pip install flask requests
+
+
+python app.py
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Information Lookup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .info-box {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dynamic Information Lookup</h1>
+    <form id="infoForm">
+        <input type="text" id="topicInput" name="topic" placeholder="Enter a topic">
+        <button type="submit">Get Information</button>
+    </form>
+
+    <div id="infoBox" class="info-box" style="display:none;"></div>
+</div>
+
+<script>
+    document.getElementById('infoForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const topic = document.getElementById('topicInput').value;
+
+        const response = await fetch('/get_info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `topic=${encodeURIComponent(topic)}`
+        });
+        const data = await response.json();
+
+        const infoBox = document.getElementById('infoBox');
+        if (data.status === 'success') {
+            infoBox.style.display = 'block';
+            infoBox.innerHTML = data.information;
+        } else {
+            infoBox.style.display = 'block';
+            infoBox.innerHTML = data.information;
+        }
+    });
+</script>
+
+</body>
+</html>
+
+
+
+
+
+from flask import Flask, render_template, request, jsonify
+import requests
+
+app = Flask(__name__)
+
+# Wikipedia API base URL
+WIKIPEDIA_API_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/"
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/get_info', methods=['POST'])
+def get_info():
+    topic = request.form.get('topic', '').strip()
+    if not topic:
+        return jsonify({"status": "error", "information": "Please enter a valid topic."})
+
+    try:
+        # Fetch information from Wikipedia API
+        response = requests.get(WIKIPEDIA_API_URL + topic)
+        if response.status_code == 200:
+            data = response.json()
+            # Check if the page exists
+            if "extract" in data:
+                return jsonify({"status": "success", "information": data["extract"]})
+            else:
+                return jsonify({"status": "error", "information": "No information found for this topic."})
+        else:
+            return jsonify({"status": "error", "information": "Could not fetch data. Please try again later."})
+    except Exception as e:
+        return jsonify({"status": "error", "information": f"An error occurred: {str(e)}"})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
